@@ -62,6 +62,8 @@ public class Robot extends TimedRobot {
   private double mid = 30;
   private double high = 42;
 
+  //claw
+  private final CANSparkMax m_claw = new CANSparkMax(4, MotorType.kBrushed);
 
   //CREATE CONTROLLER :)
   private final XboxController m_driveController = new XboxController(0);
@@ -205,8 +207,12 @@ public class Robot extends TimedRobot {
 
     if(rightTrigger > 0){
       //right trigger closes the claw
+      m_claw.set(0.5);
     } else if(leftTrigger > 0) {
       //left trigger opens the claw
+      m_claw.set(-0.5);
+    } else {
+      m_claw.set(0.25);
     }
 
     SmartDashboard.putNumber("Arm Position: ", m_encoder.getPosition());
