@@ -8,6 +8,9 @@ package frc.robot;
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTableValue;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -69,6 +72,20 @@ public class Robot extends TimedRobot {
   private final XboxController m_driveController = new XboxController(0);
   private final XboxController m_operatorController = new XboxController(1);
 
+  //Limelight networking variables
+  private final NetworkTable kLimelightTable = NetworkTableInstance.getDefault().getTable("limelight");
+  private final NetworkTableValue kLimelightTXvalue = kLimelightTable.getValue("tx");
+  private final NetworkTableValue kLimelightTYvalue = kLimelightTable.getValue("ty");
+  private final NetworkTableValue kLimelightTAvalue = kLimelightTable.getValue("ta");
+  private final NetworkTableValue kLimelightTVvalue = kLimelightTable.getValue("tv");
+  
+  //Limelight target variables
+  private boolean limelightTargetDetected = false;
+  private double limelightTargetX = 0.0;
+  private double limelightTargetY = 0.0;
+  private double limelightTargetArea = 0.0;
+
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -98,7 +115,9 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    updateLimelight();
+  }
 
   /**
    * This autonomous (along with the chooser code above) shows how to select between different
@@ -242,4 +261,27 @@ public class Robot extends TimedRobot {
   /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {}
+
+  /*
+   * This function periodically checks the NetworkTable for updates from 
+   * the limelight and updates the target variables if a valid target is found.
+  */
+  public void updateLimelight() {
+
+    try {
+      limelightTargetDetected = kLimelightTVvalue.getBoolean();
+      limelightTargetX = kLimelightTXvalue.getDouble();
+      limelightTargetY = kLimelightTYvalue.getDouble();
+      limelightTargetArea = kLimelightTAvalue.getDouble();
+    } catch (ClassCastException ex)
+    {
+      // This exception will occur if the Limelight NetworkTable can't be found,
+      // which could be caused by a bad ethernet cable or something similar
+    }
+    
+
+    /* You could add additional vision processing code here, but it's best 
+     to keep it as inexpensive as possible and leave more computationally
+     intensive tasks to a vision coprocessor */
+  }
 }
