@@ -58,7 +58,7 @@ public class Robot extends TimedRobot {
   private final PIDController pid = new PIDController(kP, kI, kD);
   private double setpoint = 0;
   private double start = -5;
-  private double floor = 0;
+  private double floor = 10;
   private double mid = 30;
   private double high = 42;
 
@@ -207,12 +207,12 @@ public class Robot extends TimedRobot {
 
     if(rightTrigger > 0){
       //right trigger closes the claw
-      m_claw.set(0.5);
+      m_claw.set(-0.35);
     } else if(leftTrigger > 0) {
       //left trigger opens the claw
-      m_claw.set(-0.5);
+      m_claw.set(0.2);
     } else {
-      m_claw.set(0.25);
+      m_claw.set(0.00);
     }
 
     SmartDashboard.putNumber("Arm Position: ", m_encoder.getPosition());
