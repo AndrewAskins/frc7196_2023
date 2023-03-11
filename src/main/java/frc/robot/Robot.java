@@ -7,6 +7,8 @@ package frc.robot;
 
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.cscore.VideoSource;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -73,6 +75,10 @@ public class Robot extends TimedRobot {
   private final XboxController m_driveController = new XboxController(0);
   private final XboxController m_operatorController = new XboxController(1);
 
+  //Cameras
+  private UsbCamera camera1;
+  private UsbCamera camera2;
+
   //Limelight networking variables
   private final NetworkTable kLimelightTable = NetworkTableInstance.getDefault().getTable("limelight");
   private final NetworkTableValue kLimelightTXvalue = kLimelightTable.getValue("tx");
@@ -102,7 +108,13 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Speed choices", m_speedChooser);
 
     //camera
-    CameraServer.startAutomaticCapture();
+    camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
+    camera1.setResolution(640, 480);
+    camera1.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
+
+    camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
+    camera2.setResolution(640, 480);
+    camera2.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
     //invert voltages of one of our motors
     m_rightMotor.setInverted(true);
