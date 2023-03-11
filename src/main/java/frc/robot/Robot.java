@@ -35,6 +35,7 @@ public class Robot extends TimedRobot {
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   private double autoSpeed = 0;
   private double autoStart = 0;
+  private autoBalance mAutoBalance;
 
   //create motors for drivetrain
   private final Spark m_leftMotor = new Spark(0);
@@ -105,6 +106,9 @@ public class Robot extends TimedRobot {
 
     //invert voltages of one of our motors
     m_rightMotor.setInverted(true);
+
+    //initialize autoBalance code
+    mAutoBalance = new autoBalance();
   }
 
   /**
@@ -116,7 +120,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    updateLimelight();
+    //updateLimelight();
   }
 
   /**
@@ -142,7 +146,8 @@ public class Robot extends TimedRobot {
   public void autonomousPeriodic() {
     switch (m_autoSelected) {
       case kBalanceAuto:
-        
+        double speed = mAutoBalance.scoreAndBalance();
+        m_robotDrive.arcadeDrive(speed, 0);
 
         break;
       case kDefaultAuto:
