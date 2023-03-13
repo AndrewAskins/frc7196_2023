@@ -109,11 +109,11 @@ public class Robot extends TimedRobot {
 
     //camera
     camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
-    camera1.setResolution(640, 480);
+    camera1.setResolution(480, 320);
     camera1.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
     camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
-    camera2.setResolution(640, 480);
+    camera2.setResolution(480, 320);
     camera2.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
     //invert voltages of one of our motors
