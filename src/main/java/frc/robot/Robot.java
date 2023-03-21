@@ -9,6 +9,7 @@ import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.cscore.VideoSource;
+import edu.wpi.first.cscore.VideoMode.PixelFormat;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -54,22 +55,26 @@ public class Robot extends TimedRobot {
   private double speedMultiplier = slowSpeed;
 
   //shoulder
-  private final CANSparkMax m_shoulder = new CANSparkMax(5, MotorType.kBrushless);
-  private final RelativeEncoder m_encoder = m_shoulder.getEncoder();
+  private CANSparkMax m_shoulder;
+  private RelativeEncoder m_encoder;
   private final double kP = 0.016;
-  private final double kI = 0.0;
+  private final double kI = 0.002;
   private final double kD = 0.0;
   //double kI = 0.00002;
   //double kD = 0.0001;
   private final PIDController pid = new PIDController(kP, kI, kD);
   private double setpoint = 0;
-  private double start = -5;
+  private double start = -1;
   private double floor = 10;
-  private double mid = 30;
-  private double high = 42;
+  private double mid = 41;
+  private double high = 48;
+  private double player_station = 45;
+  private double feedForward = 0.01;
 
   //claw
   private final CANSparkMax m_claw = new CANSparkMax(4, MotorType.kBrushed);
+  private final double closeClawSpeed = -0.5;
+  private final double openClawSpeed = 0.2;
 
   //CREATE CONTROLLER :)
   private final XboxController m_driveController = new XboxController(0);
@@ -108,19 +113,27 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Speed choices", m_speedChooser);
 
     //camera
+    //CameraServer.startAutomaticCapture();
     camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
-    camera1.setResolution(480, 320);
+    camera1.setResolution(240, 180);
+    camera1.setPixelFormat(PixelFormat.kMJPEG);
+    camera1.setFPS(25);
     camera1.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
-    camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
-    camera2.setResolution(480, 320);
-    camera2.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
+    // camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
+    // camera2.setResolution(240, 180);
+    // camera2.setPixelFormat(PixelFormat.kMJPEG);
+    // camera2.setFPS(15);
+    // camera2.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
     //invert voltages of one of our motors
     m_rightMotor.setInverted(true);
 
-    //initialize autoBalance code
-    mAutoBalance = new autoBalance();
+    //initialize arm spark max so the encoder value gets reset
+    m_shoulder = new CANSparkMax(5, MotorType.kBrushless);
+    m_shoulder.restoreFactoryDefaults();
+    m_encoder = m_shoulder.getEncoder();
+    m_encoder.setPosition(0);
   }
 
   /**
@@ -148,6 +161,9 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_autoSelected = m_chooser.getSelected();
+    
+    //initialize autoBalance code
+    mAutoBalance = new autoBalance();
 
     //get a time for auton start to do events based on time later
     autoStart = Timer.getFPGATimestamp();
@@ -156,34 +172,42 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    m_autoSelected = kDefaultAuto;//m_chooser.getSelected();
+    SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
+    double speed;
+
     switch (m_autoSelected) {
       case kBalanceAuto:
-        double speed = mAutoBalance.scoreAndBalance();
+        speed = mAutoBalance.score();
+        SmartDashboard.putNumber("Auto speed: ", speed);
         m_robotDrive.arcadeDrive(speed, 0);
 
         break;
       case kDefaultAuto:
       default:
-        //get time since start of auto
-        double autoTimeElapsed = Timer.getFPGATimestamp() - autoStart;
-        //series of timed events making up the flow of auto
-        if(autoTimeElapsed < 2){
-          //raise the arm and drive forward slowly for three seconds
-          autoSpeed = .65;
-          setpoint = high;
-        }else if(autoTimeElapsed < 6){
-          //stop and drop the game piece
-          autoSpeed = 0;
-        }else if(autoTimeElapsed < 15){
-          //back up for four seconds to leave the community
-          autoSpeed = -0.75;
-        }else{
-          //stop
-          autoSpeed = 0;
-        }
+        // //get time since start of auto
+        // double autoTimeElapsed = Timer.getFPGATimestamp() - autoStart;
+        // //series of timed events making up the flow of auto
+        // if(autoTimeElapsed < 2){
+        //   //raise the arm and drive forward slowly for three seconds
+        //   autoSpeed = .65;
+        //   setpoint = high;
+        // }else if(autoTimeElapsed < 6){
+        //   //stop and drop the game piece
+        //   autoSpeed = 0;
+        // }else if(autoTimeElapsed < 15){
+        //   //back up for four seconds to leave the community
+        //   autoSpeed = -0.75;
+        // }else{
+        //   //stop
+        //   autoSpeed = 0;
+        // }
 
-        m_robotDrive.arcadeDrive(autoSpeed, 0);
-        m_shoulder.set(pid.calculate(m_encoder.getPosition(), setpoint));
+        // m_robotDrive.arcadeDrive(autoSpeed, 0);
+        // m_shoulder.set(pid.calculate(m_encoder.getPosition(), setpoint));
+        speed = mAutoBalance.score();
+        SmartDashboard.putNumber("Auto speed: ", speed);
+        m_robotDrive.arcadeDrive(speed, 0);
         break;
     }
   }
@@ -223,6 +247,13 @@ public class Robot extends TimedRobot {
     boolean bButtonPressed = m_operatorController.getBButtonPressed();
     boolean yButtonPressed = m_operatorController.getYButtonPressed();
     boolean xButtonPressed = m_operatorController.getXButtonPressed();
+    boolean backButtonPressed = m_operatorController.getBackButtonPressed();
+
+    // intentionally putting this in separate if/else to ensure accidental back button presses are overridden
+
+    if(backButtonPressed){
+      setpoint = start;
+    }
 
     if(aButtonPressed){
       //a button set the arm to floor
@@ -235,24 +266,25 @@ public class Robot extends TimedRobot {
       setpoint = high;
     } else if(xButtonPressed) {
       //x button set the arm to retract
-      setpoint = start;
+      setpoint = player_station;
     }
 
     double pidValue = pid.calculate(m_encoder.getPosition(), setpoint);
-    m_shoulder.set(pidValue);
+    m_shoulder.set(feedForward + pidValue);
+
 
     if(rightTrigger > 0){
       //right trigger closes the claw
-      m_claw.set(-0.35);
+      m_claw.set(closeClawSpeed);
     } else if(leftTrigger > 0) {
       //left trigger opens the claw
-      m_claw.set(0.2);
+      m_claw.set(openClawSpeed);
     } else {
       m_claw.set(0.00);
     }
 
     SmartDashboard.putNumber("Arm Position: ", m_encoder.getPosition());
-
+    SmartDashboard.putNumber("PID", pidValue);
   }
 
   /** This function is called once when the robot is disabled. */
@@ -265,11 +297,11 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when test mode is enabled. */
   @Override
-  public void testInit() {}
+  public void testInit() {mAutoBalance = new autoBalance();}
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {System.out.println("Tilt: "+ mAutoBalance.getTilt());}
 
   /** This function is called once when the robot is first started up. */
   @Override

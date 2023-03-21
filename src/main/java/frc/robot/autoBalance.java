@@ -24,32 +24,32 @@ public class autoBalance {
          * CONFIG *
          **********/
         //Speed the robot drived while scoring/approaching station, default = 0.4
-        robotSpeedFast = 0.4;
+        robotSpeedFast = 0.75;
         
         //Speed the robot drives while balancing itself on the charge station.
         //Should be roughly half the fast speed, to make the robot more accurate, default = 0.2
-        robotSpeedSlow = 0.2;
+        robotSpeedSlow = 0.6;
 
         //Angle where the robot knows it is on the charge station, default = 13.0
-        onChargeStationDegree = 13.0;
+        onChargeStationDegree = -82.0;
 
         //Angle where the robot can assume it is level on the charging station
         //Used for exiting the drive forward sequence as well as for auto balancing, default = 6.0
-        levelDegree = 6.0;
+        levelDegree = -71.0;
 
         //Amount of time a sensor condition needs to be met before changing states in seconds
-        //Reduces the impact of sensor noice, but too high can make the auto run slower, default = 0.2
-        debounceTime = 0.2;
+        //Reduces the impact of sensor noise, but too high can make the auto run slower, default = 0.2
+        debounceTime = 0.35;
 		
 		//Amount of time to drive towards to scoring target when trying to bump the game piece off
 		//Time it takes to go from starting position to hit the scoring target
-		singleTapTime = 0.4;
+		singleTapTime = 0.3;
 		
 		//Amount of time to drive away from knocked over gamepiece before the second tap
-		scoringBackUpTime = 0.2;
+		scoringBackUpTime = 0.3;
 		
 		//Amount of time to drive forward to secure the scoring of the gamepiece
-		doubleTapTime = 0.3;
+		doubleTapTime = 1;
 
     }
 
@@ -122,9 +122,35 @@ public class autoBalance {
         return 0;
     }
 
+    //  auto period by scoring
+    // a game piece on the back bumper of the robot
+    public double score(){
+        //System.out.println("Tilt: "+getTilt());
+        //System.out.println("State: "+state);
+        switch (state){
+            //drive back, then forwards, then back again to knock off and score game piece
+            case 0:
+                debounceCount++;
+                if(debounceCount < secondsToTicks(singleTapTime)){
+                    return -robotSpeedFast;
+                } else if(debounceCount < secondsToTicks(singleTapTime+scoringBackUpTime)){
+                    return robotSpeedFast;
+                } else if(debounceCount < secondsToTicks(singleTapTime+scoringBackUpTime+doubleTapTime)){
+                    return -robotSpeedFast;
+                } else {
+                    debounceCount = 0;
+                    state = 1;
+                    return 0;
+                }
+            }
+        return 0;
+    }
+
     // Same as auto balance above, but starts auto period by scoring
     // a game piece on the back bumper of the robot
     public double scoreAndBalance(){
+        System.out.println("Tilt: "+getTilt());
+        System.out.println("State: "+state);
         switch (state){
             //drive back, then forwards, then back again to knock off and score game piece
             case 0:
@@ -173,9 +199,9 @@ public class autoBalance {
                     return 0;
                 }
                 if(getTilt() >= levelDegree) {
-                    return robotSpeedSlow/2;
+                    return robotSpeedSlow;
                 } else if(getTilt() <= -levelDegree) {
-                    return -robotSpeedSlow/2;
+                    return -robotSpeedSlow;
                 }
             case 4:
                 return 0;
