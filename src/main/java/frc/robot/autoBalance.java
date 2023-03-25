@@ -53,7 +53,7 @@ public class autoBalance {
 		doubleTapTime = 1;
 
         //Amount of time to drive away from the grid to get out of the community in seconds
-        escapeTime = 1.5;
+        escapeTime = 2;
 
     }
 
