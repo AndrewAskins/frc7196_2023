@@ -52,8 +52,8 @@ public class autoBalance {
 		//Amount of time to drive forward to secure the scoring of the gamepiece
 		doubleTapTime = 1;
 
-        //Amount of time to drive away from the grid to get out of the community
-        escapeTime = 3;
+        //Amount of time to drive away from the grid to get out of the community in seconds
+        escapeTime = 1.5;
 
     }
 
