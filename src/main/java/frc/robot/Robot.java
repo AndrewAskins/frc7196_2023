@@ -90,7 +90,7 @@ public class Robot extends TimedRobot {
   //claw
   private final CANSparkMax m_claw = new CANSparkMax(4, MotorType.kBrushed);
   private final double closeClawSpeed = -0.3;
-  private final double openClawSpeed = 0.35;
+  private final double openClawSpeed = 0.25;
 
   //CREATE CONTROLLER :)
   private final XboxController m_driveController = new XboxController(0);
