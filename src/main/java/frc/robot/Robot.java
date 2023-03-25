@@ -129,11 +129,7 @@ public class Robot extends TimedRobot {
     m_speedChooser.addOption("Fast", kFastSpeed);
     SmartDashboard.putData("Speed choices", m_speedChooser);
 
-<<<<<<< HEAD
-    //camera
-=======
     //setup our front camera
->>>>>>> 93e14c60ceef09e992ee93057273f0cc27367b23
     camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
     camera1.setResolution(320, 240);
     camera1.setFPS(15);
@@ -168,13 +164,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-<<<<<<< HEAD
-    //updateLimelight();
-
-    //SmartDashboard.putNumber("FPS: ", camera1.getActualFPS());
-=======
     SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
->>>>>>> 93e14c60ceef09e992ee93057273f0cc27367b23
   }
 
   /**
@@ -190,9 +180,6 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_autoSelected = m_chooser.getSelected();
-
-    //get a time for auton start to do events based on time later
-    autoStart = Timer.getFPGATimestamp();
   }
 
   /** This function is called periodically during autonomous. */
