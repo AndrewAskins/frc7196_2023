@@ -14,6 +14,7 @@ public class autoBalance {
 	private double singleTapTime;
 	private double scoringBackUpTime;
 	private double doubleTapTime;
+    private double escapeTime;
 
     public autoBalance(){
         mRioAccel = new BuiltInAccelerometer();
@@ -41,7 +42,7 @@ public class autoBalance {
         //Reduces the impact of sensor noise, but too high can make the auto run slower, default = 0.2
         debounceTime = 0.35;
 		
-		//Amount of time to drive towards to scoring target when trying to bump the game piece off
+		//Amount of time to drive towards the target when trying to bump the game piece off
 		//Time it takes to go from starting position to hit the scoring target
 		singleTapTime = 0.3;
 		
@@ -50,6 +51,9 @@ public class autoBalance {
 		
 		//Amount of time to drive forward to secure the scoring of the gamepiece
 		doubleTapTime = 1;
+
+        //Amount of time to drive away from the grid to get out of the community
+        escapeTime = 3;
 
     }
 
@@ -125,8 +129,6 @@ public class autoBalance {
     //  auto period by scoring
     // a game piece on the back bumper of the robot
     public double score(){
-        //System.out.println("Tilt: "+getTilt());
-        //System.out.println("State: "+state);
         switch (state){
             //drive back, then forwards, then back again to knock off and score game piece
             case 0:
@@ -143,6 +145,30 @@ public class autoBalance {
                     return 0;
                 }
             }
+        return 0;
+    }
+
+    //  auto period - score and drive out of the community
+    //  a game piece on the back bumper of the robot
+    public double scoreAndDrive(){
+        switch (state){
+            //drive back, then forwards, then back again to knock off and score game piece, then leave the community
+            case 0:
+                debounceCount++;
+                if(debounceCount < secondsToTicks(singleTapTime)){
+                    return -robotSpeedFast;
+                } else if(debounceCount < secondsToTicks(singleTapTime+scoringBackUpTime)){
+                    return robotSpeedFast;
+                } else if(debounceCount < secondsToTicks(singleTapTime+scoringBackUpTime+doubleTapTime)){
+                    return -robotSpeedFast;
+                } else if(debounceCount < secondsToTicks(singleTapTime+scoringBackUpTime+doubleTapTime+escapeTime)){
+                    return robotSpeedFast;
+                }else {
+                    debounceCount = 0;
+                    state = 1;
+                    return 0;
+                }
+        }
         return 0;
     }
 
