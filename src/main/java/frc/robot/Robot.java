@@ -32,7 +32,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class Robot extends TimedRobot {
   //create our variables and options for auton
-  private static final String kDefaultAuto = "Basic Auto";
+  private static final String kScoreAuto = "Score Auto";
+  private static final String kScoreAndDriveAuto = "Score + Drive Auto";
+  private static final String kScoreAndBalanceAuto = "Score + Balance Auto";
   private static final String kBalanceAuto = "Balance Auto";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
@@ -60,8 +62,6 @@ public class Robot extends TimedRobot {
   private final double kP = 0.016;
   private final double kI = 0.002;
   private final double kD = 0.0;
-  //double kI = 0.00002;
-  //double kD = 0.0001;
   private final PIDController pid = new PIDController(kP, kI, kD);
   private double setpoint = 0;
   private double start = -1;
@@ -82,7 +82,7 @@ public class Robot extends TimedRobot {
 
   //Cameras
   private UsbCamera camera1;
-  private UsbCamera camera2;
+  //private UsbCamera camera2;
 
   //Limelight networking variables
   private final NetworkTable kLimelightTable = NetworkTableInstance.getDefault().getTable("limelight");
@@ -90,12 +90,6 @@ public class Robot extends TimedRobot {
   private final NetworkTableValue kLimelightTYvalue = kLimelightTable.getValue("ty");
   private final NetworkTableValue kLimelightTAvalue = kLimelightTable.getValue("ta");
   private final NetworkTableValue kLimelightTVvalue = kLimelightTable.getValue("tv");
-  
-  //Limelight target variables
-  private boolean limelightTargetDetected = false;
-  private double limelightTargetX = 0.0;
-  private double limelightTargetY = 0.0;
-  private double limelightTargetArea = 0.0;
 
 
   /**
@@ -104,22 +98,29 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    m_chooser.setDefaultOption("Basic Auto", kDefaultAuto);
-    m_chooser.addOption("Balance Auto", kBalanceAuto);
+    //Add autobalance options to dashboard
+    m_chooser.setDefaultOption(kScoreAuto, kScoreAuto);
+    m_chooser.addOption(kScoreAndDriveAuto, kScoreAndDriveAuto);
+    m_chooser.addOption(kScoreAndBalanceAuto, kScoreAndBalanceAuto);
+    m_chooser.addOption(kBalanceAuto, kBalanceAuto);
     SmartDashboard.putData("Auto choices", m_chooser);
 
+    //initialize autoBalance code
+    mAutoBalance = new autoBalance();
+
+    //Add speed options to dashboard
     m_speedChooser.setDefaultOption("Slow", kSlowSpeed);
     m_speedChooser.addOption("Fast", kFastSpeed);
     SmartDashboard.putData("Speed choices", m_speedChooser);
 
-    //camera
-    //CameraServer.startAutomaticCapture();
+    //setup our front camera
     camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
     camera1.setResolution(240, 180);
     camera1.setPixelFormat(PixelFormat.kMJPEG);
     camera1.setFPS(25);
     camera1.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
+    //setup our second camera
     // camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
     // camera2.setResolution(240, 180);
     // camera2.setPixelFormat(PixelFormat.kMJPEG);
@@ -128,6 +129,9 @@ public class Robot extends TimedRobot {
 
     //invert voltages of one of our motors
     m_rightMotor.setInverted(true);
+
+    //set a current limit for the claw
+    m_claw.setSmartCurrentLimit(20);
 
     //initialize arm spark max so the encoder value gets reset
     m_shoulder = new CANSparkMax(5, MotorType.kBrushless);
@@ -145,7 +149,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    //updateLimelight();
+    SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
   }
 
   /**
@@ -161,9 +165,6 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_autoSelected = m_chooser.getSelected();
-    
-    //initialize autoBalance code
-    mAutoBalance = new autoBalance();
 
     //get a time for auton start to do events based on time later
     autoStart = Timer.getFPGATimestamp();
@@ -172,39 +173,27 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    m_autoSelected = kDefaultAuto;//m_chooser.getSelected();
-    SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
+    m_autoSelected = m_chooser.getSelected();
     double speed;
 
     switch (m_autoSelected) {
-      case kBalanceAuto:
-        speed = mAutoBalance.score();
+      case kScoreAndBalanceAuto:
+        speed = mAutoBalance.scoreAndBalance();
         SmartDashboard.putNumber("Auto speed: ", speed);
         m_robotDrive.arcadeDrive(speed, 0);
-
         break;
-      case kDefaultAuto:
+      case kBalanceAuto:
+        speed = mAutoBalance.autoBalanceRoutine();
+        SmartDashboard.putNumber("Auto speed: ", speed);
+        m_robotDrive.arcadeDrive(speed, 0);
+        break;
+      case kScoreAndDriveAuto:
+        speed = mAutoBalance.scoreAndDrive();
+        SmartDashboard.putNumber("Auto speed: ", speed);
+        m_robotDrive.arcadeDrive(speed, 0);
+        break;
+      case kScoreAuto:
       default:
-        // //get time since start of auto
-        // double autoTimeElapsed = Timer.getFPGATimestamp() - autoStart;
-        // //series of timed events making up the flow of auto
-        // if(autoTimeElapsed < 2){
-        //   //raise the arm and drive forward slowly for three seconds
-        //   autoSpeed = .65;
-        //   setpoint = high;
-        // }else if(autoTimeElapsed < 6){
-        //   //stop and drop the game piece
-        //   autoSpeed = 0;
-        // }else if(autoTimeElapsed < 15){
-        //   //back up for four seconds to leave the community
-        //   autoSpeed = -0.75;
-        // }else{
-        //   //stop
-        //   autoSpeed = 0;
-        // }
-
-        // m_robotDrive.arcadeDrive(autoSpeed, 0);
-        // m_shoulder.set(pid.calculate(m_encoder.getPosition(), setpoint));
         speed = mAutoBalance.score();
         SmartDashboard.putNumber("Auto speed: ", speed);
         m_robotDrive.arcadeDrive(speed, 0);
@@ -310,27 +299,4 @@ public class Robot extends TimedRobot {
   /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {}
-
-  /*
-   * This function periodically checks the NetworkTable for updates from 
-   * the limelight and updates the target variables if a valid target is found.
-  */
-  public void updateLimelight() {
-
-    try {
-      limelightTargetDetected = kLimelightTVvalue.getBoolean();
-      limelightTargetX = kLimelightTXvalue.getDouble();
-      limelightTargetY = kLimelightTYvalue.getDouble();
-      limelightTargetArea = kLimelightTAvalue.getDouble();
-    } catch (ClassCastException ex)
-    {
-      // This exception will occur if the Limelight NetworkTable can't be found,
-      // which could be caused by a bad ethernet cable or something similar
-    }
-    
-
-    /* You could add additional vision processing code here, but it's best 
-     to keep it as inexpensive as possible and leave more computationally
-     intensive tasks to a vision coprocessor */
-  }
 }
