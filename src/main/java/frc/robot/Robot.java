@@ -55,7 +55,7 @@ public class Robot extends TimedRobot {
   private static final String kScoreAndBalanceAuto = "Score + Balance Auto";
   private static final String kBalanceAuto = "Balance Auto";
   private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  private SendableChooser<String> m_chooser;
   private autoBalance mAutoBalance;
 
   //create motors for drivetrain
@@ -69,7 +69,7 @@ public class Robot extends TimedRobot {
   private static final double fastSpeed = 1.0;
   private static final double slowSpeed = 0.75;
   private String m_speedSelected;
-  private final SendableChooser<String> m_speedChooser = new SendableChooser<>();
+  private SendableChooser<String> m_speedChooser;
   private double speedMultiplier = slowSpeed;
 
   //shoulder
@@ -88,7 +88,7 @@ public class Robot extends TimedRobot {
   private double feedForward = 0.01;
 
   //claw
-  private final CANSparkMax m_claw = new CANSparkMax(4, MotorType.kBrushed);
+  private CANSparkMax m_claw;
   private final double closeClawSpeed = -0.3;
   private final double openClawSpeed = 0.25;
 
@@ -107,6 +107,13 @@ public class Robot extends TimedRobot {
   private final NetworkTableValue kLimelightTAvalue = kLimelightTable.getValue("ta");
   private final NetworkTableValue kLimelightTVvalue = kLimelightTable.getValue("tv");
 
+  //Setup lights
+  CANLight lights;
+  private static final String kRedTeam = "Red Alliance";
+  private static final String kBlueTeam = "Blue Alliance";
+  private String m_colorSelected;
+  private SendableChooser<String> m_colorChooser;
+
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -114,26 +121,40 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+
     //Add autobalance options to dashboard
+    m_chooser = new SendableChooser<>();
     m_chooser.setDefaultOption(kScoreAuto, kScoreAuto);
     m_chooser.addOption(kScoreAndDriveAuto, kScoreAndDriveAuto);
     m_chooser.addOption(kScoreAndBalanceAuto, kScoreAndBalanceAuto);
     m_chooser.addOption(kBalanceAuto, kBalanceAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+    SmartDashboard.putData("Auto mode:", m_chooser);
 
     //initialize autoBalance code
     mAutoBalance = new autoBalance();
 
     //Add speed options to dashboard
+    m_speedChooser = new SendableChooser<>();
     m_speedChooser.setDefaultOption("Slow", kSlowSpeed);
     m_speedChooser.addOption("Fast", kFastSpeed);
-    SmartDashboard.putData("Speed choices", m_speedChooser);
+    SmartDashboard.putData("Speed:", m_speedChooser);
+
+    //Setup lights and color options
+    lights = new CANLight(0);
+    //red
+    lights.writeRegister(0, 30, 255, 0, 0);
+    //blue
+    lights.writeRegister(1, 30, 0, 0, 255);
+
+    m_colorChooser = new SendableChooser<>();
+    m_colorChooser.setDefaultOption(kBlueTeam, kBlueTeam);
+    m_colorChooser.addOption(kRedTeam, kRedTeam);
+    SmartDashboard.putData("Color:", m_colorChooser);
 
     //setup our front camera
     camera1 = CameraServer.startAutomaticCapture("Front Camera", 0);
     camera1.setResolution(320, 240);
     camera1.setFPS(15);
-    //camera1.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen);
 
     //setup our second camera
     // camera2 = CameraServer.startAutomaticCapture("Back camera", 1);
@@ -146,6 +167,7 @@ public class Robot extends TimedRobot {
     m_rightMotor.setInverted(true);
 
     //set a current limit for the claw
+    m_claw = new CANSparkMax(4, MotorType.kBrushed);
     m_claw.setSmartCurrentLimit(20);
 
     //initialize arm spark max so the encoder value gets reset
@@ -153,6 +175,7 @@ public class Robot extends TimedRobot {
     m_shoulder.restoreFactoryDefaults();
     m_encoder = m_shoulder.getEncoder();
     m_encoder.setPosition(0);
+    
   }
 
   /**
@@ -165,6 +188,17 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
+
+    m_colorSelected = m_colorChooser.getSelected();
+    switch(m_colorSelected){
+      case kRedTeam:
+        lights.showRegister(0);
+        break;
+      case kBlueTeam:
+      default:
+        lights.showRegister(1);
+        break;
+    }
   }
 
   /**
