@@ -4,25 +4,43 @@
 
 package frc.robot;
 
+//ROBOT
+import edu.wpi.first.wpilibj.TimedRobot;
 
-import com.revrobotics.RelativeEncoder;
+//CAMERA
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.cscore.VideoSource;
 import edu.wpi.first.cscore.VideoMode.PixelFormat;
+
+//PID + Encoder
+import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.math.controller.PIDController;
+
+//VISION
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTableValue;
-import edu.wpi.first.wpilibj.TimedRobot;
+
+//AUTO
 import edu.wpi.first.wpilibj.Timer;
+
+//CONTROLLER
 import edu.wpi.first.wpilibj.XboxController;
+
+//DRIVE TRAIN
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+
+//MOTOR CONTROLLERS
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
+//SMART DASHBOARD
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+//CAN LIGHTS
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -38,8 +56,6 @@ public class Robot extends TimedRobot {
   private static final String kBalanceAuto = "Balance Auto";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
-  private double autoSpeed = 0;
-  private double autoStart = 0;
   private autoBalance mAutoBalance;
 
   //create motors for drivetrain
