@@ -10,20 +10,10 @@ import edu.wpi.first.wpilibj.TimedRobot;
 //CAMERA
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.cscore.VideoSource;
-import edu.wpi.first.cscore.VideoMode.PixelFormat;
 
 //PID + Encoder
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.math.controller.PIDController;
-
-//VISION
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.NetworkTableValue;
-
-//AUTO
-import edu.wpi.first.wpilibj.Timer;
 
 //CONTROLLER
 import edu.wpi.first.wpilibj.XboxController;
@@ -40,7 +30,9 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-//CAN LIGHTS
+//LEDS
+import edu.wpi.first.wpilibj.AddressableLED;
+import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -83,13 +75,14 @@ public class Robot extends TimedRobot {
   private double start = -1;
   private double floor = 10;
   private double mid = 41;
-  private double high = 48;
-  private double player_station = 45;
+  private double high = 47;
+  private double player_station = 42;
   private double feedForward = 0.01;
+  private double above_floor = 18;
 
   //claw
   private CANSparkMax m_claw;
-  private final double closeClawSpeed = -0.3;
+  private final double closeClawSpeed = -0.37;
   private final double openClawSpeed = 0.25;
 
   //CREATE CONTROLLER :)
@@ -100,13 +93,6 @@ public class Robot extends TimedRobot {
   private UsbCamera camera1;
   //private UsbCamera camera2;
 
-  //Limelight networking variables
-  private final NetworkTable kLimelightTable = NetworkTableInstance.getDefault().getTable("limelight");
-  private final NetworkTableValue kLimelightTXvalue = kLimelightTable.getValue("tx");
-  private final NetworkTableValue kLimelightTYvalue = kLimelightTable.getValue("ty");
-  private final NetworkTableValue kLimelightTAvalue = kLimelightTable.getValue("ta");
-  private final NetworkTableValue kLimelightTVvalue = kLimelightTable.getValue("tv");
-
   //Setup lights
   CANLight lights;
   private static final String kRedTeam = "Red Alliance";
@@ -114,6 +100,9 @@ public class Robot extends TimedRobot {
   private String m_colorSelected;
   private SendableChooser<String> m_colorChooser;
 
+  //LEDS
+  private AddressableLED m_led;
+  private AddressableLEDBuffer m_ledBuffer;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -140,11 +129,11 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Speed:", m_speedChooser);
 
     //Setup lights and color options
-    lights = new CANLight(0);
-    //red
-    lights.writeRegister(0, 30, 255, 0, 0);
-    //blue
-    lights.writeRegister(1, 30, 0, 0, 255);
+    // lights = new CANLight(3);
+    // //red
+    // lights.writeRegister(0, 30, 255, 0, 0);
+    // //blue
+    // lights.writeRegister(1, 30, 0, 0, 255);
 
     m_colorChooser = new SendableChooser<>();
     m_colorChooser.setDefaultOption(kBlueTeam, kBlueTeam);
@@ -168,13 +157,34 @@ public class Robot extends TimedRobot {
 
     //set a current limit for the claw
     m_claw = new CANSparkMax(4, MotorType.kBrushed);
-    m_claw.setSmartCurrentLimit(20);
+    // m_claw.setSmartCurrentLimit(20);
 
     //initialize arm spark max so the encoder value gets reset
     m_shoulder = new CANSparkMax(5, MotorType.kBrushless);
     m_shoulder.restoreFactoryDefaults();
     m_encoder = m_shoulder.getEncoder();
     m_encoder.setPosition(0);
+
+    // PWM port 9
+    // Must be a PWM header, not MXP or DIO
+    m_led = new AddressableLED(9);
+
+    // Reuse buffer
+    // Default to a length of 60, start empty output
+    // Length is expensive to set, so only set it once, then just update data
+    m_ledBuffer = new AddressableLEDBuffer(120);
+    m_led.setLength(m_ledBuffer.getLength());
+
+    for (var i = 0; i < m_ledBuffer.getLength(); i++) {
+        // Sets the specified LED to the RGB values for red
+        m_ledBuffer.setRGB(i, 0, 0, 255);
+    }
+    
+    m_led.setData(m_ledBuffer);
+
+    // Set the data
+    m_led.setData(m_ledBuffer);
+    m_led.start();
     
   }
 
@@ -189,16 +199,16 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     SmartDashboard.putNumber("Tilt: ", mAutoBalance.getTilt());
 
-    m_colorSelected = m_colorChooser.getSelected();
-    switch(m_colorSelected){
-      case kRedTeam:
-        lights.showRegister(0);
-        break;
-      case kBlueTeam:
-      default:
-        lights.showRegister(1);
-        break;
-    }
+    // m_colorSelected = m_colorChooser.getSelected();
+    // switch(m_colorSelected){
+    //   case kRedTeam:
+    //     lights.showRegister(0);
+    //     break;
+    //   case kBlueTeam:
+    //   default:
+    //     lights.showRegister(1);
+    //     break;
+    // }
   }
 
   /**
@@ -283,7 +293,7 @@ public class Robot extends TimedRobot {
     boolean yButtonPressed = m_operatorController.getYButtonPressed();
     boolean xButtonPressed = m_operatorController.getXButtonPressed();
     boolean backButtonPressed = m_operatorController.getBackButtonPressed();
-
+  
     // intentionally putting this in separate if/else to ensure accidental back button presses are overridden
 
     if(backButtonPressed){
@@ -302,6 +312,9 @@ public class Robot extends TimedRobot {
     } else if(xButtonPressed) {
       //x button set the arm to retract
       setpoint = player_station;
+    } else if(leftBumperPressed) {
+      // left bumper button set the arm to above floor
+      setpoint = above_floor;
     }
 
     double pidValue = pid.calculate(m_encoder.getPosition(), setpoint);
